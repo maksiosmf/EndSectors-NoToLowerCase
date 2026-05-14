@@ -37,7 +37,7 @@ public final class UserProfileCache {
     }
 
     private static String getKey(@NonNull String name) {
-        return PREFIX + name.toLowerCase();
+        return PREFIX + name;
     }
 
     public static void save(@NonNull UserProfile user) {
@@ -103,15 +103,15 @@ public final class UserProfileCache {
     }
 
     public static void addToCache(@NonNull UserProfile profile) {
-        LOCAL_CACHE.put(profile.getName().toLowerCase(), profile);
+        LOCAL_CACHE.put(profile.getName(), profile);
     }
 
     public static UserProfile getFromCache(@NonNull String name) {
-        return LOCAL_CACHE.get(name.toLowerCase());
+        return LOCAL_CACHE.get(name);
     }
 
     public static void removeFromCache(@NonNull String name) {
-        LOCAL_CACHE.remove(name.toLowerCase());
+        LOCAL_CACHE.remove(name);
     }
 
     public static void clearCache() {

@@ -36,7 +36,10 @@ public class PacketUserCheckListener implements PacketListener<PacketUserCheck> 
     @Override
     public void handle(PacketUserCheck packet) {
         final Sector currentSector = PaperSector.getInstance().getSectorManager().getCurrentSector();
-        String username = packet.getUsername().toLowerCase();
+        if (packet.getUsername() == null) {
+            return;
+        }
+        String username = packet.getUsername();
         Optional<UserProfile> user = UserProfileRepository.getUser(username);
         boolean exists = user.isPresent();
         String sector = user.map(UserProfile::getSectorName).orElse(null);

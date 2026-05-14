@@ -43,7 +43,7 @@ public class PacketUserCheckProxyListener implements PacketListener<PacketUserCh
             return;
         }
 
-        final String username = packet.getUsername().toLowerCase();
+        final String username = packet.getUsername();
         final UserProfileCache userProfileCache = VelocitySectorPlugin.getInstance().getUserProfileCache();
         final UserFlagCache cache = UserFlagCache.getInstance();
 

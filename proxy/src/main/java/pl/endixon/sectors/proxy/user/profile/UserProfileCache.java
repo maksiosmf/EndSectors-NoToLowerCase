@@ -106,6 +106,6 @@ public class UserProfileCache {
 
 
     private String buildKey(String playerName) {
-        return KEY_PREFIX + playerName.toLowerCase();
+        return KEY_PREFIX + playerName;
     }
 }

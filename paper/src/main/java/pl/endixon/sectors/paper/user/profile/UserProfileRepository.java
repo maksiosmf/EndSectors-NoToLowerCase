@@ -36,31 +36,30 @@ package pl.endixon.sectors.paper.user.profile;
         }
 
         public static Optional<UserProfile> getUser(@NonNull String name) {
-            final String key = name.toLowerCase();
-            final UserProfile cached = UserProfileCache.getFromCache(key);
+            final UserProfile cached = UserProfileCache.getFromCache(name);
 
             if (cached == null) {
-                 LoggerUtil.info(String.format("[ProfileRepo] Cache miss for '%s'. Loading from database.", key));
-                return reloadFromRedis(key);
+                 LoggerUtil.info(String.format("[ProfileRepo] Cache miss for '%s'. Loading from database.", name));
+                return reloadFromRedis(name);
             }
 
-            final long remoteVersion = UserProfileCache.getRemoteVersion(key);
+            final long remoteVersion = UserProfileCache.getRemoteVersion(name);
 
             if (remoteVersion == -2L) {
-                LoggerUtil.info(String.format("[ProfileRepo] Database unreachable. Serving stale data for '%s'.", key));
+                LoggerUtil.info(String.format("[ProfileRepo] Database unreachable. Serving stale data for '%s'.", name));
                 return Optional.of(cached);
             }
 
             if (remoteVersion > cached.getDataVersion()) {
-                LoggerUtil.info(String.format("[ProfileRepo] Version mismatch for '%s' (v%d -> v%d). Synchronizing...", key, cached.getDataVersion(), remoteVersion));
-                return reloadFromRedis(key);
+                LoggerUtil.info(String.format("[ProfileRepo] Version mismatch for '%s' (v%d -> v%d). Synchronizing...", name, cached.getDataVersion(), remoteVersion));
+                return reloadFromRedis(name);
             }
 
             return Optional.of(cached);
         }
 
         public static Optional<UserProfile> reloadFromRedis(@NonNull String name) {
-            return UserProfileCache.load(name.toLowerCase()).map(data -> {
+            return UserProfileCache.load(name).map(data -> {
                 UserProfile profile = new UserProfile(data);
                 UserProfileCache.addToCache(profile);
                 return profile;
