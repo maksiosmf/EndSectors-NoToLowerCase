@@ -43,7 +43,8 @@ public class PacketUserCheckListener implements PacketListener<PacketUserCheck> 
         Optional<UserProfile> user = UserProfileRepository.getUser(username);
         boolean exists = user.isPresent();
         String sector = user.map(UserProfile::getSectorName).orElse(null);
-        PacketUserCheck response = new PacketUserCheck(username, exists, sector);
+        String canonicalUsername = user.map(UserProfile::getName).orElse(username);
+        PacketUserCheck response = new PacketUserCheck(canonicalUsername, exists, sector);
 
         if (currentSector == null || currentSector.getType() != SectorType.QUEUE) {
             return;

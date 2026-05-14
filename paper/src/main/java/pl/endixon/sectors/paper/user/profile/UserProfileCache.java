@@ -19,13 +19,16 @@
 
 package pl.endixon.sectors.paper.user.profile;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.NonNull;
 import pl.endixon.sectors.common.Common;
-import pl.endixon.sectors.paper.PaperSector;
 import pl.endixon.sectors.paper.util.LoggerUtil;
 
 public final class UserProfileCache {
@@ -40,6 +43,20 @@ public final class UserProfileCache {
         return PREFIX + name;
     }
 
+    /**
+     * Redis keys use {@link UserProfile#getName()} casing. Lookup may receive Velocity's lowercase
+     * username — try exact then legacy lowercase key (same player, Mojang-normalized name).
+     */
+    private static List<String> redisNameSuffixes(@NonNull String name) {
+        Set<String> ordered = new LinkedHashSet<>();
+        ordered.add(name);
+        String lower = name.toLowerCase(Locale.ROOT);
+        if (!lower.equals(name)) {
+            ordered.add(lower);
+        }
+        return new ArrayList<>(ordered);
+    }
+
     public static void save(@NonNull UserProfile user) {
         try {
             Common.getInstance().getRedisManager().hset(getKey(user.getName()), user.toRedisMap());
@@ -50,13 +67,14 @@ public final class UserProfileCache {
 
     public static long getRemoteVersion(@NonNull String name) {
         try {
-            String version = Common.getInstance().getRedisManager().hget(getKey(name), "dataVersion");
-
-            if (version == null) {
-                return -1L;
+            for (String suffix : redisNameSuffixes(name)) {
+                String version = Common.getInstance().getRedisManager().hget(getKey(suffix), "dataVersion");
+                if (version == null) {
+                    continue;
+                }
+                return Long.parseLong(version);
             }
-
-            return Long.parseLong(version);
+            return -1L;
         } catch (NumberFormatException e) {
             LoggerUtil.warn(String.format("[ProfileCache] Corrupted dataVersion for '%s'. Value is not a valid Long.", name));
             return 0L;
@@ -68,11 +86,13 @@ public final class UserProfileCache {
 
     public static Optional<Map<String, String>> load(@NonNull String name) {
         try {
-            Map<String, String> data = Common.getInstance().getRedisManager().hgetAll(getKey(name));
-            if (data == null || data.isEmpty()) {
-                return Optional.empty();
+            for (String suffix : redisNameSuffixes(name)) {
+                Map<String, String> data = Common.getInstance().getRedisManager().hgetAll(getKey(suffix));
+                if (data != null && !data.isEmpty()) {
+                    return Optional.of(data);
+                }
             }
-            return Optional.of(data);
+            return Optional.empty();
         } catch (Exception e) {
             LoggerUtil.error(String.format("[ProfileCache] Critical failure during load for user '%s': %s", name, e.getMessage()));
             return Optional.empty();
@@ -104,14 +124,27 @@ public final class UserProfileCache {
 
     public static void addToCache(@NonNull UserProfile profile) {
         LOCAL_CACHE.put(profile.getName(), profile);
+        String lower = profile.getName().toLowerCase(Locale.ROOT);
+        if (!lower.equals(profile.getName())) {
+            LOCAL_CACHE.put(lower, profile);
+        }
     }
 
     public static UserProfile getFromCache(@NonNull String name) {
-        return LOCAL_CACHE.get(name);
+        UserProfile hit = LOCAL_CACHE.get(name);
+        if (hit != null) {
+            return hit;
+        }
+        String lower = name.toLowerCase(Locale.ROOT);
+        return lower.equals(name) ? null : LOCAL_CACHE.get(lower);
     }
 
     public static void removeFromCache(@NonNull String name) {
         LOCAL_CACHE.remove(name);
+        String lower = name.toLowerCase(Locale.ROOT);
+        if (!lower.equals(name)) {
+            LOCAL_CACHE.remove(lower);
+        }
     }
 
     public static void clearCache() {

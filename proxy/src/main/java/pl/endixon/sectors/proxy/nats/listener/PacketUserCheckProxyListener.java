@@ -54,7 +54,13 @@ public class PacketUserCheckProxyListener implements PacketListener<PacketUserCh
 
         cache.setExists(username, true);
 
-        String resolvedSector = this.resolveSector(username, cache, userProfileCache);
+        String resolvedSector = null;
+        if (this.isValid(packet.getLastSector())) {
+            resolvedSector = packet.getLastSector().trim();
+            this.updateStorages(username, resolvedSector, cache, userProfileCache);
+        } else {
+            resolvedSector = this.resolveSector(username, cache, userProfileCache);
+        }
 
         if (resolvedSector == null) {
             resolvedSector = this.sectorManager.getRandomNonQueueSector()

@@ -19,13 +19,15 @@
 
 package pl.endixon.sectors.proxy.user.profile;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 
 import pl.endixon.sectors.common.Common;
-import pl.endixon.sectors.proxy.VelocitySectorPlugin;
 import pl.endixon.sectors.proxy.util.LoggerUtil;
 
 /*
@@ -59,22 +61,24 @@ public class UserProfileCache {
             return Optional.empty();
         }
 
-        final String key = buildKey(playerName);
-
         try {
-            final Map<String, String> data = Common.getInstance().getRedisManager().hgetAll(key);
+            for (String suffix : redisNameSuffixes(playerName.trim())) {
+                final String key = buildKey(suffix);
+                final Map<String, String> data = Common.getInstance().getRedisManager().hgetAll(key);
 
-            if (data == null || data.isEmpty()) {
-                return Optional.empty();
+                if (data == null || data.isEmpty()) {
+                    continue;
+                }
+
+                final String sector = data.get(FIELD_SECTOR);
+
+                if (sector == null || sector.isBlank() || sector.trim().equalsIgnoreCase(VALUE_UNKNOWN)) {
+                    continue;
+                }
+
+                return Optional.of(sector.trim());
             }
-
-            final String sector = data.get(FIELD_SECTOR);
-
-            if (sector == null || sector.isBlank() || sector.trim().equalsIgnoreCase(VALUE_UNKNOWN)) {
-                return Optional.empty();
-            }
-
-            return Optional.of(sector.trim());
+            return Optional.empty();
         } catch (Exception exception) {
             LoggerUtil.info("[CRITICAL] Failed to retrieve sector data for " + playerName + ": " + exception.getMessage());
             return Optional.empty();
@@ -94,16 +98,31 @@ public class UserProfileCache {
             return;
         }
 
-        final String key = buildKey(playerName);
-
         try {
-            Common.getInstance().getRedisManager().hset(key, Map.of(FIELD_SECTOR, sanitizedSector));
+            String trimmed = playerName.trim();
+            for (String suffix : redisNameSuffixes(trimmed)) {
+                final String key = buildKey(suffix);
+                final Map<String, String> data = Common.getInstance().getRedisManager().hgetAll(key);
+                if (data != null && !data.isEmpty()) {
+                    Common.getInstance().getRedisManager().hset(key, Map.of(FIELD_SECTOR, sanitizedSector));
+                    return;
+                }
+            }
+            Common.getInstance().getRedisManager().hset(buildKey(trimmed), Map.of(FIELD_SECTOR, sanitizedSector));
         } catch (Exception exception) {
             LoggerUtil.info("[CRITICAL] Failed to persist sector '" + sanitizedSector + "' for " + playerName + ": " + exception.getMessage());
         }
     }
 
-
+    private static List<String> redisNameSuffixes(String name) {
+        Set<String> ordered = new LinkedHashSet<>();
+        ordered.add(name);
+        String lower = name.toLowerCase(Locale.ROOT);
+        if (!lower.equals(name)) {
+            ordered.add(lower);
+        }
+        return new ArrayList<>(ordered);
+    }
 
     private String buildKey(String playerName) {
         return KEY_PREFIX + playerName;
