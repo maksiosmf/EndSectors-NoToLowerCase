@@ -46,8 +46,8 @@ public class ConfigLoader {
                         root = createDefaultData();
                         saveJson(configPath, root);
                     } else {
-                        if (deepMerge(root, createDefaultData())) {
-                            LoggerUtil.info("Config.json was missing some keys. Automatically patched with new defaults.");
+                        if (patchMissingTopLevelKeys(root, createDefaultData())) {
+                            LoggerUtil.info("Config.json was missing some top-level keys. Automatically patched with defaults.");
                             saveJson(configPath, root);
                         }
                     }
@@ -80,26 +80,17 @@ public class ConfigLoader {
     }
 
 
-    @SuppressWarnings("unchecked")
-    private static boolean deepMerge(Map<String, Object> original, Map<String, Object> template) {
+    private static boolean patchMissingTopLevelKeys(Map<String, Object> original, Map<String, Object> template) {
         boolean modified = false;
         for (Map.Entry<String, Object> entry : template.entrySet()) {
-            String key = entry.getKey();
-            Object templateValue = entry.getValue();
-
-            if (!original.containsKey(key)) {
-                original.put(key, templateValue);
+            if (!original.containsKey(entry.getKey())) {
+                original.put(entry.getKey(), entry.getValue());
                 modified = true;
-            } else if (templateValue instanceof Map && original.get(key) instanceof Map) {
-                if (deepMerge((Map<String, Object>) original.get(key), (Map<String, Object>) templateValue)) {
-                    modified = true;
-                }
             }
         }
         return modified;
     }
 
-    @SuppressWarnings("unchecked")
     private static void parseSectors(VelocitySectorPlugin plugin, ConfigLoader config, Map<String, Map<String, Object>> sectorsMap) {
         for (Map.Entry<String, Map<String, Object>> typeEntry : sectorsMap.entrySet()) {
             String typeName = typeEntry.getKey();

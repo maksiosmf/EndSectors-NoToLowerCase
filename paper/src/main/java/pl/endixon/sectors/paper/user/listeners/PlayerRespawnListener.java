@@ -46,10 +46,19 @@ public class PlayerRespawnListener implements Listener {
         final Player victim = event.getEntity();
         final Sector currentSector = paperSector.getSectorManager().getCurrentSector();
 
+        if (currentSector == null) {
+            return;
+        }
+
         if (currentSector.getType() == SectorType.QUEUE) {
             event.setCancelled(true);
             return;
         }
+
+        event.setKeepInventory(true);
+        event.getDrops().clear();
+        event.setKeepLevel(true);
+        event.setDroppedExp(0);
 
         paperSector.getServer().getScheduler().scheduleSyncDelayedTask(paperSector, victim.spigot()::respawn, 1L);
     }

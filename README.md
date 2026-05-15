@@ -18,6 +18,18 @@
 
 <hr>
 
+> [!NOTE]
+> **🍴 Fork notice**
+> This repository is a fork of the upstream [endixons/EndSectors](https://github.com/endixons/EndSectors). All credit for the original framework goes to the upstream authors. Maintained at [maksiosmf/EndSectors-NoToLowerCase](https://github.com/maksiosmf/EndSectors-NoToLowerCase).
+>
+> **Changes in this fork vs. upstream:**
+> - **Preserve player-name casing.** Profile keys in Redis (`user:<Name>`) and the NATS user-check pipeline keep the original Mojang casing instead of being lower-cased. Lookups fall back to the legacy lower-case key so older profiles keep working.
+> - **Last-sector routing fix.** Routing after the casing change correctly resolves the player's last sector instead of always falling back to a random sector.
+> - **Proxy `config.json` no longer auto-restores deleted sectors.** The previous deep-merge in `ConfigLoader` re-added any sector entry from the template (e.g. `spawn_2`) on restart. Now only **missing top-level keys** are patched; if you remove a sector from `sectors`, it stays removed.
+> - **Items / XP preserved on death → spawn.** On `PlayerDeathEvent` (outside `QUEUE`) the listener now sets `keepInventory`/`keepLevel`, clears drops, and zeroes dropped XP, so the post-respawn `updateAndSave` during the spawn transfer no longer writes an empty inventory back to Redis. Added a `currentSector == null` guard while at it.
+
+<hr>
+
 
 **EndSectors** — professional Minecraft sector framework for **Paper 1.21.4** with **NATS & Redis** 🗄️⚡
 
